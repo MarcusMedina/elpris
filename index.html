@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
-<title>Elpriskollen</title>
+<title>Elpris</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#ECEFF2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D141A" media="(prefers-color-scheme: dark)">
@@ -132,13 +132,15 @@ textarea{width:100%;box-sizing:border-box;min-height:96px;resize:vertical;border
 #pasteMsg{font-size:14px}
 #pasteMsg.err{color:var(--bad)}
 .foot{margin:0;font-size:13px;color:var(--muted)}
+.footlinks{display:flex;flex-wrap:wrap;gap:8px}
+.flink{appearance:none;display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:600 14px var(--font-body);text-decoration:none;cursor:pointer}
 @media (prefers-reduced-motion:no-preference){.num{transition:color .2s}}
 </style>
 </head>
 <body>
 <main class="wrap">
   <header class="top">
-    <h1 class="brand">Elpriskollen</h1>
+    <h1 class="brand">Elpris</h1>
     <div class="ctl">
       <label class="sr" for="zone">Elområde</label>
       <select id="zone">
@@ -245,6 +247,14 @@ textarea{width:100%;box-sizing:border-box;min-height:96px;resize:vertical;border
   </details>
 
   <p class="foot">Spotpris från Nord Pool via elprisetjustnu.se. Nätavgift, energiskatt och elbolagets påslag ingår inte.</p>
+
+  <nav class="footlinks" aria-label="Länkar">
+    <button type="button" class="flink" id="shareBtn">Dela sidan</button>
+    <a class="flink" href="https://github.com/MarcusMedina/elpris" target="_blank" rel="noopener">GitHub</a>
+    <button type="button" class="flink" id="installBtn">Installera</button>
+  </nav>
+  <p class="foot" id="footMsg" role="status" hidden></p>
+  <p class="foot" id="installHelp" hidden>Android (Chrome): meny ⋮ → Installera app. iPhone (Safari): Dela → Lägg till på hemskärmen. Dator (Chrome eller Edge): installationsikonen i adressfältet.</p>
 </main>
 
 <script>
@@ -703,6 +713,32 @@ function init(){
     save();
     setMsg('Sparad data för '+state.zone+' är rensad.',false);
     render();
+  });
+  var deferred=null;
+  var standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;
+  if(standalone) $('installBtn').hidden=true;
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e});
+  window.addEventListener('appinstalled',function(){deferred=null;$('installBtn').hidden=true;$('installHelp').hidden=true});
+  $('installBtn').addEventListener('click',function(){
+    if(deferred){var d=deferred;deferred=null;d.prompt();return}
+    $('installHelp').hidden=!$('installHelp').hidden;
+  });
+  var footTimer=0;
+  function footMsg(t){
+    var m=$('footMsg');
+    m.textContent=t;m.hidden=false;
+    clearTimeout(footTimer);
+    footTimer=setTimeout(function(){m.hidden=true},3500);
+  }
+  $('shareBtn').addEventListener('click',function(){
+    var url=location.origin+location.pathname.replace(/index\.html$/,'');
+    if(navigator.share){
+      navigator.share({title:'Elpris',text:'Elpriset just nu och bästa tid att köra maskinen',url:url}).catch(function(){});
+      return;
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(function(){footMsg('Länken är kopierad.')},function(){footMsg(url)});
+    }else{footMsg(url)}
   });
   render();
   var real=state.store[state.zone];

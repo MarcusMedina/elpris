@@ -1,7 +1,7 @@
-// Elpriskollen service worker.
+// Elpris service worker.
 // Network first for the app's own files, with the cache as fallback when offline.
 // Requests to other origins (the price API, Google Fonts) are never touched here.
-const CACHE = 'elpriskollen-v1';
+const CACHE = 'elpris-v1';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
