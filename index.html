@@ -152,13 +152,13 @@ textarea{width:100%;box-sizing:border-box;min-height:96px;resize:vertical;border
     <div class="eyebrow"><span>Just nu</span><span class="tag" id="exTag" hidden>Exempel</span></div>
     <div class="price">
       <div class="num" id="priceNum">–</div>
-      <div class="unit"><b>öre/kWh</b><span id="unitSub">spotpris inkl. moms</span></div>
+      <div class="unit"><b>kr/kWh</b><span id="unitSub">spotpris inkl. moms</span></div>
     </div>
     <div class="meta"><span class="pill" id="pill" hidden></span><span id="range"></span></div>
     <p class="cheaper" id="cheaper"></p>
     <div class="stats">
       <div class="stat"><small>Lägst idag</small><strong id="stLow">–</strong><span id="stLowT"></span></div>
-      <div class="stat"><small>Snitt idag</small><strong id="stAvg">–</strong><span>öre/kWh</span></div>
+      <div class="stat"><small>Snitt idag</small><strong id="stAvg">–</strong><span>kr/kWh</span></div>
       <div class="stat"><small>Högst idag</small><strong id="stHigh">–</strong><span id="stHighT"></span></div>
     </div>
   </section>
@@ -200,7 +200,7 @@ textarea{width:100%;box-sizing:border-box;min-height:96px;resize:vertical;border
     <div class="readout">
       <div><div class="r-time" id="rTime">–</div><div class="r-day" id="rDay"></div></div>
       <div style="display:grid;gap:6px;justify-items:end">
-        <div class="r-val" id="rVal">–<small> öre/kWh</small></div>
+        <div class="r-val" id="rVal">–<small> kr/kWh</small></div>
         <button type="button" class="reset" id="rReset" hidden>Visa nu</button>
       </div>
     </div>
@@ -297,6 +297,7 @@ var fDate=new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,weekday:'short',day:'nume
 var nf0=new Intl.NumberFormat('sv-SE',{maximumFractionDigits:0});
 var nf1=new Intl.NumberFormat('sv-SE',{minimumFractionDigits:1,maximumFractionDigits:1});
 var nf2=new Intl.NumberFormat('sv-SE',{minimumFractionDigits:2,maximumFractionDigits:2});
+var nfAx=new Intl.NumberFormat('sv-SE',{minimumFractionDigits:1,maximumFractionDigits:2});
 
 function tm(ms){return fTime.format(new Date(ms))}
 function sp(ms){
@@ -313,7 +314,7 @@ function dayLabel(ms,now){
   return fDate.format(new Date(ms)).replace(/\./g,'');
 }
 function disp(p){return p*100*(state.moms?1.25:1)}
-function ore(v){return Math.abs(v)>=10?nf0.format(Math.round(v)):nf1.format(v)}
+function fmtKr(v){return nf2.format(v/100)}
 function pad(n){return (n<10?'0':'')+n}
 function apiUrl(ms){
   var p=sp(ms);
@@ -457,7 +458,7 @@ function render(){
 
   var pill=$('pill');
   if(cur){
-    $('priceNum').textContent=ore(disp(cur.p));
+    $('priceNum').textContent=fmtKr(disp(cur.p));
     $('range').textContent='kl '+tm(cur.s)+'–'+tm(cur.e);
     var tr=tier(cur.p,t);
     pill.hidden=false;pill.className='pill '+tr;pill.textContent=TIER_TXT[tr];
@@ -465,7 +466,7 @@ function render(){
     var nx=null;
     for(var k=0;k<E.length;k++){if(E[k].s>now&&E[k].p<=thr){nx=E[k];break}}
     $('cheaper').textContent=nx
-      ?('Billigare om '+fmtDur(Math.ceil((nx.s-now)/60000))+' (kl '+tm(nx.s)+'): '+ore(disp(nx.p))+' öre')
+      ?('Billigare om '+fmtDur(Math.ceil((nx.s-now)/60000))+' (kl '+tm(nx.s)+'): '+fmtKr(disp(nx.p))+' kr')
       :'Inget billigare än nu i prisdatan framåt.';
   }else{
     $('priceNum').textContent='–';
@@ -483,9 +484,9 @@ function render(){
       if(x.p>mx.p) mx=x;
       sum+=x.p*(x.e-x.s);dsum+=x.e-x.s;
     });
-    $('stLow').textContent=ore(disp(mn.p));$('stLowT').textContent='kl '+tm(mn.s);
-    $('stAvg').textContent=ore(disp(sum/dsum));
-    $('stHigh').textContent=ore(disp(mx.p));$('stHighT').textContent='kl '+tm(mx.s);
+    $('stLow').textContent=fmtKr(disp(mn.p));$('stLowT').textContent='kl '+tm(mn.s);
+    $('stAvg').textContent=fmtKr(disp(sum/dsum));
+    $('stHigh').textContent=fmtKr(disp(mx.p));$('stHighT').textContent='kl '+tm(mx.s);
   }else{
     ['stLow','stAvg','stHigh'].forEach(function(id){$(id).textContent='–'});
     $('stLowT').textContent='';$('stHighT').textContent='';
@@ -504,14 +505,14 @@ function render(){
     if(r.best&&r.base-r.best.avg>=need){
       var wmin=Math.ceil((r.best.start-now)/60000);
       vBig.className='v-big wait';vBig.textContent='Vänta '+fmtDur(wmin);
-      vSub.textContent='Starta kl '+tm(r.best.start)+', klar kl '+tm(r.best.start+durMs)+'. Snittpris '+ore(disp(r.best.avg))+' öre i stället för '+ore(disp(r.base))+' öre om du kör nu.';
+      vSub.textContent='Starta kl '+tm(r.best.start)+', klar kl '+tm(r.best.start+durMs)+'. Snittpris '+fmtKr(disp(r.best.avg))+' kr i stället för '+fmtKr(disp(r.base))+' kr om du kör nu.';
       var kr=(disp(r.base)-disp(r.best.avg))/100*state.kwh;
       var pct=r.base>0?Math.round((r.base-r.best.avg)/r.base*100):null;
       vSave.textContent='Du sparar '+(pct!==null?pct+' % ':'')+'(ca '+nf2.format(kr)+' kr per körning)';
       state.win={s:r.best.start,e:r.best.start+durMs};
     }else{
       vBig.className='v-big go';vBig.textContent='Kör nu';
-      vSub.textContent='Snittpris '+ore(disp(r.base))+' öre under '+fmtDur(state.dur)+'. Inget inom '+fmtDur(state.wait)+' är minst 5 % billigare.';
+      vSub.textContent='Snittpris '+fmtKr(disp(r.base))+' kr under '+fmtDur(state.dur)+'. Inget inom '+fmtDur(state.wait)+' är minst 5 % billigare.';
     }
   }
   var short=last.e<now+waitMs+durMs;
@@ -544,7 +545,7 @@ function drawChart(){
   for(var k=0;k<=n;k++){
     var val=bot+k*step,y=Y(val).toFixed(1);
     grid+='<line class="'+(Math.abs(val)<1e-9?'zero':'grid')+'" x1="'+ML+'" x2="'+(W-MR)+'" y1="'+y+'" y2="'+y+'"></line>';
-    grid+='<text x="'+(ML-6)+'" y="'+(+y+4)+'" text-anchor="end">'+nf0.format(Math.round(val))+'</text>';
+    grid+='<text x="'+(ML-6)+'" y="'+(+y+4)+'" text-anchor="end">'+nfAx.format(val/100)+'</text>';
   }
   for(var i=0;i<E.length;i++){
     var p=sp(E[i].s);
@@ -586,7 +587,7 @@ function drawChart(){
   $('nowG').innerHTML=nowG;
 
   var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
-  svg.setAttribute('aria-label','Elpris per tidsintervall, från '+ore(mn)+' till '+ore(mx)+' öre per kWh');
+  svg.setAttribute('aria-label','Elpris per tidsintervall, från '+fmtKr(mn)+' till '+fmtKr(mx)+' kr per kWh');
   updateSel();
 }
 
@@ -611,12 +612,12 @@ function updateSel(){
     $('rTime').textContent=tm(show.s)+'–'+tm(show.e);
     $('rDay').textContent=dayLabel(show.s,v.now)+(x?'':' · just nu');
     val.className='r-val '+tier(show.p,v.t);
-    val.innerHTML=ore(disp(show.p))+'<small> öre/kWh</small>';
+    val.innerHTML=fmtKr(disp(show.p))+'<small> kr/kWh</small>';
   }else{
     $('rTime').textContent='–';
     $('rDay').textContent='';
     val.className='r-val';
-    val.innerHTML='–<small> öre/kWh</small>';
+    val.innerHTML='–<small> kr/kWh</small>';
   }
   $('rReset').hidden=(x===null);
 }
