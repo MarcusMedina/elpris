@@ -251,10 +251,8 @@ textarea{width:100%;box-sizing:border-box;min-height:96px;resize:vertical;border
   <nav class="footlinks" aria-label="Länkar">
     <button type="button" class="flink" id="shareBtn">Dela sidan</button>
     <a class="flink" href="https://github.com/MarcusMedina/elpris" target="_blank" rel="noopener">GitHub</a>
-    <button type="button" class="flink" id="installBtn">Installera</button>
   </nav>
   <p class="foot" id="footMsg" role="status" hidden></p>
-  <p class="foot" id="installHelp" hidden>Android (Chrome): meny ⋮ → Installera app. iPhone (Safari): Dela → Lägg till på hemskärmen. Dator (Chrome eller Edge): installationsikonen i adressfältet.</p>
 </main>
 
 <script>
@@ -713,15 +711,6 @@ function init(){
     save();
     setMsg('Sparad data för '+state.zone+' är rensad.',false);
     render();
-  });
-  var deferred=null;
-  var standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;
-  if(standalone) $('installBtn').hidden=true;
-  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e});
-  window.addEventListener('appinstalled',function(){deferred=null;$('installBtn').hidden=true;$('installHelp').hidden=true});
-  $('installBtn').addEventListener('click',function(){
-    if(deferred){var d=deferred;deferred=null;d.prompt();return}
-    $('installHelp').hidden=!$('installHelp').hidden;
   });
   var footTimer=0;
   function footMsg(t){
