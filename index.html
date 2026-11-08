@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style>
+<title>Elpriskollen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: one column, built like a price sign. Big number first, then the decision (when to run the machine), then the evidence (bar chart), then data entry. */
+:root{
+  --font-display:'Barlow Condensed','Arial Narrow','Roboto Condensed',system-ui,sans-serif;
+  --font-body:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --bg:#ECEFF2; --surface:#FFFFFF; --ink:#13202B; --muted:#586873; --line:#D2D9DF;
+  --accent:#1457C8; --good:#17754B; --mid:#A8700F; --bad:#C0392B;
+  --good-bg:#DCF0E5; --mid-bg:#F6E8C8; --bad-bg:#F9DEDA; --band:rgba(20,87,200,.15);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D141A; --surface:#151F27; --ink:#E7EDF1; --muted:#8FA1AD; --line:#26333E;
+    --accent:#6AA8FF; --good:#4FC48C; --mid:#E0B24A; --bad:#FF7F70;
+    --good-bg:#15332A; --mid-bg:#38300F; --bad-bg:#3E1E1B; --band:rgba(106,168,255,.2);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D141A; --surface:#151F27; --ink:#E7EDF1; --muted:#8FA1AD; --line:#26333E;
+  --accent:#6AA8FF; --good:#4FC48C; --mid:#E0B24A; --bad:#FF7F70;
+  --good-bg:#15332A; --mid-bg:#38300F; --bad-bg:#3E1E1B; --band:rgba(106,168,255,.2);
+  color-scheme:dark;
+}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.45 var(--font-body);-webkit-text-size-adjust:100%}
+.wrap{max-width:620px;margin:0 auto;padding-block:14px 36px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
+.wrap>*{min-width:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.brand{font:700 24px/1 var(--font-display);letter-spacing:.04em;text-transform:uppercase;margin:0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select{min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);padding:0 10px;font:600 15px var(--font-body)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{appearance:none;border:0;border-left:1px solid var(--line);background:transparent;color:var(--ink);min-width:48px;min-height:40px;padding:0 12px;font:600 15px var(--font-body);cursor:pointer}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+.notice{margin:0;border:1px dashed var(--mid);background:var(--mid-bg);border-radius:8px;padding:10px 12px;font-size:14px}
+
+.eyebrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font:600 12px/1 var(--font-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.tag{background:var(--mid-bg);color:var(--mid);padding:4px 7px;border-radius:4px}
+.price{display:flex;align-items:flex-end;gap:12px;margin-top:8px}
+.num{font:700 clamp(120px,40vw,184px)/.82 var(--font-display);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.unit{display:grid;padding-bottom:6px}
+.unit b{font:600 28px/1 var(--font-display)}
+.unit span{font-size:13px;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:14px}
+.pill{font:600 14px/1 var(--font-body);padding:7px 11px;border-radius:999px}
+.pill.good{background:var(--good-bg);color:var(--good)}
+.pill.mid{background:var(--mid-bg);color:var(--mid)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+#range{color:var(--muted);font-size:15px}
+.cheaper{margin:10px 0 0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;border-top:1px solid var(--line);padding-top:12px;margin-top:16px}
+.stat small{display:block;font:600 11px/1.2 var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat strong{display:block;font:600 28px/1.1 var(--font-display);font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+h2{font:700 20px/1.1 var(--font-display);letter-spacing:.05em;text-transform:uppercase;margin:0 0 12px}
+.v-big{font:700 clamp(34px,11vw,46px)/1 var(--font-display)}
+.v-big.go{color:var(--good)}
+.v-big.wait{color:var(--accent)}
+.v-big.none{color:var(--muted)}
+.v-sub{margin:8px 0 0}
+.v-save{margin:4px 0 0;font-weight:600}
+.v-note{margin:8px 0 0;font-size:13px;color:var(--muted)}
+.opts{display:grid;gap:12px;margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+.lbl{font:600 12px/1.2 var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+input[type=number]{width:84px;min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:0 10px;font:600 16px var(--font-body);text-align:right}
+
+.readout{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:8px}
+.r-time{font:600 22px/1 var(--font-display);font-variant-numeric:tabular-nums}
+.r-day{font-size:13px;color:var(--muted)}
+.r-val{font:700 40px/1 var(--font-display);font-variant-numeric:tabular-nums;text-align:right}
+.r-val small{font:500 14px var(--font-body);color:var(--muted)}
+.r-val.good{color:var(--good)} .r-val.mid{color:var(--mid)} .r-val.bad{color:var(--bad)}
+.reset{appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;min-height:32px;padding:0 10px;font:600 13px var(--font-body);cursor:pointer}
+#chart{display:block;width:100%;height:210px;touch-action:pan-y;cursor:crosshair}
+#chart text{font:11px var(--font-body);fill:var(--muted)}
+#chart .grid{stroke:var(--line);stroke-width:1}
+#chart .day{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+#chart .zero{stroke:var(--muted);stroke-width:1}
+#chart .b-good{fill:var(--good)}
+#chart .b-mid{fill:var(--mid)}
+#chart .b-bad{fill:var(--bad)}
+#chart .past{opacity:.38}
+#chart .nowline{stroke:var(--ink);stroke-width:1.5}
+#chart text.nowlbl{fill:var(--ink);font-weight:600}
+#chart .band{fill:var(--band)}
+#chart .selr{fill:none;stroke:var(--ink);stroke-width:1.5}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:13px;color:var(--muted)}
+.key{display:inline-flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+.sw.good{background:var(--good)} .sw.mid{background:var(--mid)} .sw.bad{background:var(--bad)}
+.sw.band{background:var(--band);border:1px solid var(--accent)}
+.sw.now{width:2px;height:12px;background:var(--ink);border-radius:0}
+
+details.data{border-top:1px solid var(--line);padding-top:4px}
+details.data summary{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:48px;cursor:pointer;list-style:none;font:700 20px var(--font-display);letter-spacing:.05em;text-transform:uppercase}
+details.data summary::-webkit-details-marker{display:none}
+details.data summary::after{content:"+";font:600 24px var(--font-body);color:var(--muted)}
+details.data[open] summary::after{content:"\2212"}
+#dataStatus{margin-left:auto;font:400 13px var(--font-body);letter-spacing:0;text-transform:none;color:var(--muted);text-align:right}
+.data-body{display:grid;gap:12px;padding-bottom:4px}
+.data-body p,.data-body ol{margin:0}
+.data-body ol{padding-left:20px;display:grid;gap:6px}
+.links{display:inline-flex;flex-wrap:wrap;gap:6px 10px}
+.links a{color:var(--accent);font-family:var(--font-mono);font-size:13px;overflow-wrap:anywhere}
+textarea{width:100%;box-sizing:border-box;min-height:96px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);padding:10px;font:13px/1.4 var(--font-mono)}
+#pasteMsg{font-size:14px}
+#pasteMsg.err{color:var(--bad)}
+.foot{margin:0;font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.num{transition:color .2s}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <h1 class="brand">Elpriskollen</h1>
+    <div class="ctl">
+      <label class="sr" for="zone">Elområde</label>
+      <select id="zone">
+        <option value="SE1">SE1</option>
+        <option value="SE2">SE2</option>
+        <option value="SE3">SE3</option>
+        <option value="SE4">SE4</option>
+      </select>
+      <div class="seg" role="group" aria-label="Moms">
+        <button type="button" data-moms="1" aria-pressed="true">Inkl. moms</button>
+        <button type="button" data-moms="0" aria-pressed="false">Exkl.</button>
+      </div>
+    </div>
+  </header>
+
+  <p class="notice" id="exBanner" hidden>Exempelpriser tills riktiga priser har hämtats. Fungerar inte hämtningen kan du klistra in dagens priser under Hämta priser längst ner.</p>
+
+  <section aria-label="Elpriset just nu">
+    <div class="eyebrow"><span>Just nu</span><span class="tag" id="exTag" hidden>Exempel</span></div>
+    <div class="price">
+      <div class="num" id="priceNum">–</div>
+      <div class="unit"><b>öre/kWh</b><span id="unitSub">spotpris inkl. moms</span></div>
+    </div>
+    <div class="meta"><span class="pill" id="pill" hidden></span><span id="range"></span></div>
+    <p class="cheaper" id="cheaper"></p>
+    <div class="stats">
+      <div class="stat"><small>Lägst idag</small><strong id="stLow">–</strong><span id="stLowT"></span></div>
+      <div class="stat"><small>Snitt idag</small><strong id="stAvg">–</strong><span>öre/kWh</span></div>
+      <div class="stat"><small>Högst idag</small><strong id="stHigh">–</strong><span id="stHighT"></span></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="machineH">
+    <h2 id="machineH">Kör maskinen</h2>
+    <div class="v-big none" id="vBig">–</div>
+    <p class="v-sub" id="vSub"></p>
+    <p class="v-save" id="vSave"></p>
+    <p class="v-note" id="vNote" hidden></p>
+    <div class="opts">
+      <div class="row">
+        <span class="lbl">Programtid</span>
+        <div class="seg" role="group" aria-label="Programtid">
+          <button type="button" data-dur="60" aria-pressed="false">1 h</button>
+          <button type="button" data-dur="120" aria-pressed="true">2 h</button>
+          <button type="button" data-dur="180" aria-pressed="false">3 h</button>
+          <button type="button" data-dur="240" aria-pressed="false">4 h</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="lbl">Vänta max</span>
+        <div class="seg" role="group" aria-label="Längsta väntetid">
+          <button type="button" data-wait="180" aria-pressed="false">3 h</button>
+          <button type="button" data-wait="360" aria-pressed="false">6 h</button>
+          <button type="button" data-wait="720" aria-pressed="true">12 h</button>
+          <button type="button" data-wait="1440" aria-pressed="false">24 h</button>
+        </div>
+      </div>
+      <div class="row">
+        <label class="lbl" for="kwh">Förbrukning per körning, kWh</label>
+        <input id="kwh" type="number" inputmode="decimal" min="0.1" max="20" step="0.1" value="1">
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="chartH">
+    <h2 id="chartH">Priser framåt</h2>
+    <div class="readout">
+      <div><div class="r-time" id="rTime">–</div><div class="r-day" id="rDay"></div></div>
+      <div style="display:grid;gap:6px;justify-items:end">
+        <div class="r-val" id="rVal">–<small> öre/kWh</small></div>
+        <button type="button" class="reset" id="rReset" hidden>Visa nu</button>
+      </div>
+    </div>
+    <div id="chartWrap">
+      <svg id="chart" role="img" aria-label="Elpris per tidsintervall" viewBox="0 0 320 210">
+        <g id="bandG"></g><g id="gridG"></g><g id="barsG"></g><g id="nowG"></g>
+        <rect id="selR" class="selr" x="0" y="0" width="0" height="0" visibility="hidden"></rect>
+      </svg>
+    </div>
+    <div class="legend">
+      <span class="key"><span class="sw good"></span>Billigt</span>
+      <span class="key"><span class="sw mid"></span>Normalt</span>
+      <span class="key"><span class="sw bad"></span>Dyrt</span>
+      <span class="key"><span class="sw now"></span>Nu</span>
+      <span class="key" id="keyBand" hidden><span class="sw band"></span>Bästa körning</span>
+    </div>
+    <p class="foot" style="margin-top:8px">Tryck eller dra över diagrammet för att se pris per tidsintervall.</p>
+  </section>
+
+  <details class="data" id="dataBox">
+    <summary><span>Hämta priser</span><span id="dataStatus"></span></summary>
+    <div class="data-body">
+      <p>Priserna hämtas automatiskt från elprisetjustnu.se när sidan öppnas och sedan var 30:e minut. Om hämtningen misslyckas kan du lägga in dem för hand:</p>
+      <ol>
+        <li>Öppna filen för idag: <span class="links"><a id="linkToday" href="#" target="_blank" rel="noopener">idag</a></span></li>
+        <li>Markera all text och kopiera. Morgondagens fil (<span class="links"><a id="linkTomorrow" href="#" target="_blank" rel="noopener">imorgon</a></span>) finns först cirka 13:00, och går att klistra in efter idag.</li>
+        <li>Klistra in här. Sidan läser in den direkt och sparar den i webbläsaren.</li>
+      </ol>
+      <label class="sr" for="paste">Klistra in JSON från elprisetjustnu.se</label>
+      <textarea id="paste" placeholder='[{"SEK_per_kWh":0.52,"time_start":"2026-11-08T11:00:00+01:00", ...}]' spellcheck="false" autocomplete="off"></textarea>
+      <p id="pasteMsg" role="status"></p>
+      <div><button type="button" class="reset" id="clearBtn">Rensa sparad data för valt elområde</button></div>
+    </div>
+  </details>
+
+  <p class="foot">Spotpris från Nord Pool via elprisetjustnu.se. Nätavgift, energiskatt och elbolagets påslag ingår inte.</p>
+</main>
+
+<script>
+// PURE-START
+function windowAvg(E,start,dur){
+  var i=E.findIndex(function(x){return start>=x.s&&start<x.e});
+  if(i<0) return null;
+  var cur=start,end=start+dur,sum=0;
+  while(cur<end){
+    if(i>=E.length) return null;
+    var x=E[i];
+    if(x.s>cur) return null;
+    var upto=Math.min(x.e,end);
+    sum+=(upto-cur)*x.p;
+    cur=upto;
+    if(cur>=x.e) i++;
+  }
+  return sum/dur;
+}
+function bestWin(E,now,dur,wait){
+  var base=windowAvg(E,now,dur),best=null;
+  for(var k=0;k<E.length;k++){
+    var x=E[k];
+    if(x.s<=now) continue;
+    if(x.s>now+wait) break;
+    var a=windowAvg(E,x.s,dur);
+    if(a===null) continue;
+    if(best===null||a<best.avg-1e-12) best={start:x.s,avg:a};
+  }
+  return {base:base,best:best};
+}
+function fmtDur(min){
+  var h=Math.floor(min/60),m=min%60;
+  if(h&&m) return h+' h '+m+' min';
+  if(h) return h+' h';
+  return m+' min';
+}
+function niceStep(range){
+  var raw=(range||1)/3;
+  var pow=Math.pow(10,Math.floor(Math.log10(raw)));
+  var m=raw/pow;
+  var n=m<=1?1:(m<=2?2:(m<=5?5:10));
+  return n*pow;
+}
+// PURE-END
+
+(function(){
+'use strict';
+var TZ='Europe/Stockholm',KEY='elpriskollen.v1';
+var ZONES=['SE1','SE2','SE3','SE4'],DURS=[60,120,180,240],WAITS=[180,360,720,1440];
+var state={zone:'SE3',moms:true,dur:120,wait:720,kwh:1,store:{SE1:[],SE2:[],SE3:[],SE4:[]},sel:null,win:null};
+var view=null;
+function $(id){return document.getElementById(id)}
+
+var fTime=new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+var fParts=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+var fDate=new Intl.DateTimeFormat('sv-SE',{timeZone:TZ,weekday:'short',day:'numeric',month:'short'});
+var nf0=new Intl.NumberFormat('sv-SE',{maximumFractionDigits:0});
+var nf1=new Intl.NumberFormat('sv-SE',{minimumFractionDigits:1,maximumFractionDigits:1});
+var nf2=new Intl.NumberFormat('sv-SE',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function tm(ms){return fTime.format(new Date(ms))}
+function sp(ms){
+  var o={};
+  fParts.formatToParts(new Date(ms)).forEach(function(p){o[p.type]=p.value});
+  return {y:+o.year,m:+o.month,d:+o.day,h:(+o.hour)%24,mi:+o.minute};
+}
+function dayKey(ms){var p=sp(ms);return p.y*10000+p.m*100+p.d}
+function dayLabel(ms,now){
+  var k=dayKey(ms);
+  if(k===dayKey(now)) return 'Idag';
+  if(k===dayKey(now+86400000)) return 'Imorgon';
+  if(k===dayKey(now-86400000)) return 'Igår';
+  return fDate.format(new Date(ms)).replace(/\./g,'');
+}
+function disp(p){return p*100*(state.moms?1.25:1)}
+function ore(v){return Math.abs(v)>=10?nf0.format(Math.round(v)):nf1.format(v)}
+function pad(n){return (n<10?'0':'')+n}
+function apiUrl(ms){
+  var p=sp(ms);
+  return 'https://www.elprisetjustnu.se/api/v1/prices/'+p.y+'/'+pad(p.m)+'-'+pad(p.d)+'_'+state.zone+'.json';
+}
+
+function validEntry(x){return x&&Number.isFinite(x.s)&&Number.isFinite(x.e)&&x.e>x.s&&Number.isFinite(x.p)}
+function load(){
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(!raw) return;
+    var o=JSON.parse(raw);
+    if(!o||typeof o!=='object') return;
+    if(ZONES.indexOf(o.zone)>=0) state.zone=o.zone;
+    if(typeof o.moms==='boolean') state.moms=o.moms;
+    if(DURS.indexOf(o.dur)>=0) state.dur=o.dur;
+    if(WAITS.indexOf(o.wait)>=0) state.wait=o.wait;
+    if(Number.isFinite(o.kwh)&&o.kwh>0&&o.kwh<=20) state.kwh=o.kwh;
+    if(o.store&&typeof o.store==='object'){
+      ZONES.forEach(function(z){
+        if(Array.isArray(o.store[z])) state.store[z]=o.store[z].filter(validEntry).sort(function(a,b){return a.s-b.s});
+      });
+    }
+  }catch(e){}
+}
+function save(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify({zone:state.zone,moms:state.moms,dur:state.dur,wait:state.wait,kwh:state.kwh,store:state.store}));
+  }catch(e){}
+}
+
+function parsePaste(text){
+  var j;
+  try{j=JSON.parse(text.trim())}catch(e){return {err:'Det där är inte giltig JSON. Öppna länken, markera all text och kopiera den.'}}
+  if(!Array.isArray(j)||!j.length) return {err:'Hittade ingen lista med priser. Kontrollera att texten kommer från elprisetjustnu.se.'};
+  var out=[];
+  j.forEach(function(r){
+    if(!r||typeof r!=='object'||typeof r.SEK_per_kWh!=='number') return;
+    var s=Date.parse(r.time_start),e=Date.parse(r.time_end);
+    if(Number.isFinite(s)&&Number.isFinite(e)&&e>s) out.push({s:s,e:e,p:r.SEK_per_kWh});
+  });
+  if(!out.length) return {err:'Hittade inga priser i texten. Kontrollera att texten kommer från elprisetjustnu.se.'};
+  out.sort(function(a,b){return a.s-b.s});
+  return {entries:out};
+}
+function merge(newE){
+  var lo=newE[0].s,hi=newE[newE.length-1].e;
+  var keep=state.store[state.zone].filter(function(x){return x.e<=lo||x.s>=hi});
+  var cutoff=Date.now()-36*3600000;
+  state.store[state.zone]=keep.concat(newE).sort(function(a,b){return a.s-b.s}).filter(function(x){return x.e>cutoff});
+}
+
+function fetchDay(ms){
+  return fetch(apiUrl(ms),{cache:'no-store'}).then(function(r){
+    if(r.status===404) return null;
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.text();
+  }).then(function(txt){
+    if(txt===null) return null;
+    var res=parsePaste(txt);
+    if(res.err) throw new Error(res.err);
+    return res.entries;
+  });
+}
+var fetching=false,lastTry=0;
+function hasNow(){
+  var now=Date.now();
+  return state.store[state.zone].some(function(x){return now>=x.s&&now<x.e});
+}
+function autoFetch(force){
+  var now=Date.now();
+  if(fetching||(!force&&now-lastTry<5*60000)) return;
+  fetching=true;lastTry=now;
+  var zone=state.zone;
+  var tomorrow=fetchDay(now+86400000).catch(function(){return null});
+  fetchDay(now).then(function(today){
+    return tomorrow.then(function(tmr){
+      if(zone!==state.zone) return;
+      if(today) merge(today);
+      if(tmr) merge(tmr);
+      if(today||tmr){
+        save();setMsg('',false);render();
+        $('dataBox').open=!hasNow();
+      }else{
+        setMsg('API:et hade inga priser för idag ännu.',true);
+      }
+    });
+  }).catch(function(){
+    setMsg('Kunde inte hämta automatiskt (nätverket eller API:et blockerade anropet). Klistra in manuellt nedan.',true);
+    $('dataBox').open=true;
+  }).then(function(){fetching=false});
+}
+
+var SHAPE=[0.42,0.38,0.35,0.33,0.36,0.52,0.88,1.31,1.24,0.96,0.78,0.66,0.61,0.58,0.64,0.83,1.12,1.58,1.67,1.41,1.05,0.82,0.61,0.49];
+function makeExample(now){
+  var p=sp(now);
+  var midnight=now-(p.h*3600000+p.mi*60000+(now%60000));
+  var out=[];
+  for(var d=0;d<2;d++) for(var h=0;h<24;h++){
+    var s=midnight+(d*24+h)*3600000;
+    out.push({s:s,e:s+3600000,p:SHAPE[h]*(d?0.85:1)});
+  }
+  return out;
+}
+
+function tiers(E,now){
+  var dk=dayKey(now);
+  var day=E.filter(function(x){return dayKey(x.s)===dk});
+  var base=day.length>=4?day:E;
+  var v=base.map(function(x){return x.p}).sort(function(a,b){return a-b});
+  return {lo:v[Math.floor((v.length-1)/3)],hi:v[Math.ceil((v.length-1)*2/3)]};
+}
+function tier(p,t){return p<=t.lo?'good':(p>=t.hi?'bad':'mid')}
+var TIER_TXT={good:'Billigt',mid:'Normalt',bad:'Dyrt'};
+
+function render(){
+  var now=Date.now();
+  var real=state.store[state.zone];
+  var ex=!real.length;
+  var E=ex?makeExample(now):real;
+  var t=tiers(E,now);
+  var cur=null;
+  for(var i=0;i<E.length;i++){if(now>=E[i].s&&now<E[i].e){cur=E[i];break}}
+
+  $('zone').value=state.zone;
+  document.querySelectorAll('[data-moms]').forEach(function(b){b.setAttribute('aria-pressed',String((b.getAttribute('data-moms')==='1')===state.moms))});
+  document.querySelectorAll('[data-dur]').forEach(function(b){b.setAttribute('aria-pressed',String(+b.getAttribute('data-dur')===state.dur))});
+  document.querySelectorAll('[data-wait]').forEach(function(b){b.setAttribute('aria-pressed',String(+b.getAttribute('data-wait')===state.wait))});
+  if(document.activeElement!==$('kwh')) $('kwh').value=String(state.kwh).replace(',','.');
+  $('exBanner').hidden=!ex;
+  $('exTag').hidden=!ex;
+  $('unitSub').textContent=state.moms?'spotpris inkl. moms':'spotpris exkl. moms';
+  $('linkToday').href=apiUrl(now);
+  $('linkToday').textContent=apiUrl(now).replace('https://www.elprisetjustnu.se/api/v1/prices/','');
+  $('linkTomorrow').href=apiUrl(now+86400000);
+  $('linkTomorrow').textContent=apiUrl(now+86400000).replace('https://www.elprisetjustnu.se/api/v1/prices/','');
+
+  var last=E[E.length-1];
+  var endLbl=tm(last.e)==='00:00'?'24:00':tm(last.e);
+  $('dataStatus').textContent=ex?'Exempeldata':('Data t.o.m. '+dayLabel(last.e-1,now).toLowerCase()+' '+endLbl);
+
+  var pill=$('pill');
+  if(cur){
+    $('priceNum').textContent=ore(disp(cur.p));
+    $('range').textContent='kl '+tm(cur.s)+'–'+tm(cur.e);
+    var tr=tier(cur.p,t);
+    pill.hidden=false;pill.className='pill '+tr;pill.textContent=TIER_TXT[tr];
+    var thr=cur.p-Math.max(Math.abs(cur.p)*0.1,0.02);
+    var nx=null;
+    for(var k=0;k<E.length;k++){if(E[k].s>now&&E[k].p<=thr){nx=E[k];break}}
+    $('cheaper').textContent=nx
+      ?('Billigare om '+fmtDur(Math.ceil((nx.s-now)/60000))+' (kl '+tm(nx.s)+'): '+ore(disp(nx.p))+' öre')
+      :'Inget billigare än nu i prisdatan framåt.';
+  }else{
+    $('priceNum').textContent='–';
+    $('range').textContent='Ingen prisdata för just nu';
+    pill.hidden=true;
+    $('cheaper').textContent='Hämta dagens priser under Hämta priser längst ner.';
+  }
+
+  var dk=dayKey(now);
+  var day=E.filter(function(x){return dayKey(x.s)===dk});
+  if(day.length){
+    var mn=day[0],mx=day[0],sum=0,dsum=0;
+    day.forEach(function(x){
+      if(x.p<mn.p) mn=x;
+      if(x.p>mx.p) mx=x;
+      sum+=x.p*(x.e-x.s);dsum+=x.e-x.s;
+    });
+    $('stLow').textContent=ore(disp(mn.p));$('stLowT').textContent='kl '+tm(mn.s);
+    $('stAvg').textContent=ore(disp(sum/dsum));
+    $('stHigh').textContent=ore(disp(mx.p));$('stHighT').textContent='kl '+tm(mx.s);
+  }else{
+    ['stLow','stAvg','stHigh'].forEach(function(id){$(id).textContent='–'});
+    $('stLowT').textContent='';$('stHighT').textContent='';
+  }
+
+  var durMs=state.dur*60000,waitMs=state.wait*60000;
+  var r=bestWin(E,now,durMs,waitMs);
+  var vBig=$('vBig'),vSub=$('vSub'),vSave=$('vSave'),vNote=$('vNote');
+  state.win=null;
+  vSave.textContent='';
+  if(r.base===null){
+    vBig.className='v-big none';vBig.textContent='Saknar prisdata';
+    vSub.textContent='Priserna räcker inte för en körning på '+fmtDur(state.dur)+' från nu.';
+  }else{
+    var need=Math.max(Math.abs(r.base)*0.05,0.005);
+    if(r.best&&r.base-r.best.avg>=need){
+      var wmin=Math.ceil((r.best.start-now)/60000);
+      vBig.className='v-big wait';vBig.textContent='Vänta '+fmtDur(wmin);
+      vSub.textContent='Starta kl '+tm(r.best.start)+', klar kl '+tm(r.best.start+durMs)+'. Snittpris '+ore(disp(r.best.avg))+' öre i stället för '+ore(disp(r.base))+' öre om du kör nu.';
+      var kr=(disp(r.base)-disp(r.best.avg))/100*state.kwh;
+      var pct=r.base>0?Math.round((r.base-r.best.avg)/r.base*100):null;
+      vSave.textContent='Du sparar '+(pct!==null?pct+' % ':'')+'(ca '+nf2.format(kr)+' kr per körning)';
+      state.win={s:r.best.start,e:r.best.start+durMs};
+    }else{
+      vBig.className='v-big go';vBig.textContent='Kör nu';
+      vSub.textContent='Snittpris '+ore(disp(r.base))+' öre under '+fmtDur(state.dur)+'. Inget inom '+fmtDur(state.wait)+' är minst 5 % billigare.';
+    }
+  }
+  var short=last.e<now+waitMs+durMs;
+  vNote.hidden=!short;
+  if(short) vNote.textContent='Prisdata finns bara till kl '+endLbl+', så jämförelsen gäller inte längre fram. Morgondagens priser släpps cirka 13:00.';
+
+  view={E:E,now:now,t:t,cur:cur,ex:ex};
+  drawChart();
+}
+
+function drawChart(){
+  var v=view;
+  if(!v) return;
+  var svg=$('chart');
+  var W=Math.max(280,Math.round($('chartWrap').clientWidth)||320),H=210;
+  var ML=34,MR=6,MT=18,MB=22,pw=W-ML-MR,ph=H-MT-MB;
+  var E=v.E,now=v.now,t=v.t;
+  var t0=E[0].s,t1=E[E.length-1].e,span=t1-t0;
+  var vals=E.map(function(x){return disp(x.p)});
+  var hi=Math.max.apply(null,vals.concat([0])),lo=Math.min.apply(null,vals.concat([0]));
+  var step=niceStep(hi-lo);
+  var top=Math.ceil(hi/step-1e-9)*step,bot=Math.floor(lo/step+1e-9)*step;
+  if(top===bot) top=bot+step;
+  function Y(val){return MT+(top-val)/(top-bot)*ph}
+  function X(ms){return ML+(ms-t0)/span*pw}
+  v.W=W;v.ML=ML;v.MR=MR;v.MT=MT;v.ph=ph;v.pw=pw;v.t0=t0;v.t1=t1;v.span=span;
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+
+  var grid='',n=Math.round((top-bot)/step);
+  for(var k=0;k<=n;k++){
+    var val=bot+k*step,y=Y(val).toFixed(1);
+    grid+='<line class="'+(Math.abs(val)<1e-9?'zero':'grid')+'" x1="'+ML+'" x2="'+(W-MR)+'" y1="'+y+'" y2="'+y+'"></line>';
+    grid+='<text x="'+(ML-6)+'" y="'+(+y+4)+'" text-anchor="end">'+nf0.format(Math.round(val))+'</text>';
+  }
+  for(var i=0;i<E.length;i++){
+    var p=sp(E[i].s);
+    if(p.mi!==0) continue;
+    if(p.h===0&&E[i].s>t0){
+      var xd=X(E[i].s).toFixed(1);
+      grid+='<line class="day" x1="'+xd+'" x2="'+xd+'" y1="'+MT+'" y2="'+(MT+ph)+'"></line>';
+    }
+    if(p.h%6===0){
+      var tx=Math.min(Math.max(X(E[i].s),ML+12),W-MR-12).toFixed(1);
+      var lbl=p.h===0?(p.d+' '+fDate.format(new Date(E[i].s)).replace(/\./g,'').split(' ').slice(-1)[0]):pad(p.h);
+      grid+='<text x="'+tx+'" y="'+(H-6)+'" text-anchor="middle">'+lbl+'</text>';
+    }
+  }
+  $('gridG').innerHTML=grid;
+
+  var bars='',y0=Y(0);
+  for(var j=0;j<E.length;j++){
+    var x=E[j],x0=X(x.s),w=(x.e-x.s)/span*pw;
+    var gap=w>8?1.5:(w>3?0.8:0.3);
+    var yv=Y(vals[j]);
+    bars+='<rect class="b-'+tier(x.p,t)+(x.e<=now?' past':'')+'" x="'+(x0+gap/2).toFixed(1)+'" y="'+Math.min(yv,y0).toFixed(1)+'" width="'+Math.max(w-gap,0.6).toFixed(1)+'" height="'+Math.max(Math.abs(yv-y0),1).toFixed(1)+'"></rect>';
+  }
+  $('barsG').innerHTML=bars;
+
+  var band='';
+  if(state.win){
+    var bx=X(Math.max(state.win.s,t0)),bw=X(Math.min(state.win.e,t1))-bx;
+    band='<rect class="band" x="'+bx.toFixed(1)+'" y="'+MT+'" width="'+Math.max(bw,2).toFixed(1)+'" height="'+ph+'"></rect>';
+  }
+  $('bandG').innerHTML=band;
+  $('keyBand').hidden=!state.win;
+
+  var nowG='';
+  if(now>=t0&&now<=t1){
+    var nx=X(now).toFixed(1),lx=Math.min(Math.max(+nx,ML+8),W-MR-8).toFixed(1);
+    nowG='<line class="nowline" x1="'+nx+'" x2="'+nx+'" y1="'+(MT-3)+'" y2="'+(MT+ph)+'"></line><text class="nowlbl" x="'+lx+'" y="11" text-anchor="middle">nu</text>';
+  }
+  $('nowG').innerHTML=nowG;
+
+  var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+  svg.setAttribute('aria-label','Elpris per tidsintervall, från '+ore(mn)+' till '+ore(mx)+' öre per kWh');
+  updateSel();
+}
+
+function updateSel(){
+  var v=view;
+  if(!v||v.W===undefined) return;
+  var x=null;
+  if(state.sel!==null){for(var i=0;i<v.E.length;i++){if(v.E[i].s===state.sel){x=v.E[i];break}}}
+  var r=$('selR');
+  if(x){
+    r.setAttribute('x',(v.ML+(x.s-v.t0)/v.span*v.pw).toFixed(1));
+    r.setAttribute('width',Math.max((x.e-x.s)/v.span*v.pw,2).toFixed(1));
+    r.setAttribute('y',v.MT-1);
+    r.setAttribute('height',v.ph+2);
+    r.setAttribute('visibility','visible');
+  }else{
+    r.setAttribute('visibility','hidden');
+  }
+  var show=x||v.cur;
+  var val=$('rVal');
+  if(show){
+    $('rTime').textContent=tm(show.s)+'–'+tm(show.e);
+    $('rDay').textContent=dayLabel(show.s,v.now)+(x?'':' · just nu');
+    val.className='r-val '+tier(show.p,v.t);
+    val.innerHTML=ore(disp(show.p))+'<small> öre/kWh</small>';
+  }else{
+    $('rTime').textContent='–';
+    $('rDay').textContent='';
+    val.className='r-val';
+    val.innerHTML='–<small> öre/kWh</small>';
+  }
+  $('rReset').hidden=(x===null);
+}
+
+function selectAt(ev){
+  var v=view;
+  if(!v||v.W===undefined) return;
+  var rect=$('chart').getBoundingClientRect();
+  if(!rect.width) return;
+  var px=(ev.clientX-rect.left)*(v.W/rect.width);
+  if(px<v.ML||px>v.W-v.MR) return;
+  var ms=v.t0+(px-v.ML)/v.pw*v.span;
+  for(var i=0;i<v.E.length;i++){
+    if(ms>=v.E[i].s&&ms<v.E[i].e){
+      if(state.sel!==v.E[i].s){state.sel=v.E[i].s;updateSel()}
+      return;
+    }
+  }
+}
+
+function setMsg(text,isErr){
+  var m=$('pasteMsg');
+  m.textContent=text;
+  m.className=isErr?'err':'';
+}
+
+function init(){
+  load();
+  document.querySelectorAll('[data-moms]').forEach(function(b){
+    b.addEventListener('click',function(){state.moms=b.getAttribute('data-moms')==='1';save();render()});
+  });
+  document.querySelectorAll('[data-dur]').forEach(function(b){
+    b.addEventListener('click',function(){state.dur=+b.getAttribute('data-dur');save();render()});
+  });
+  document.querySelectorAll('[data-wait]').forEach(function(b){
+    b.addEventListener('click',function(){state.wait=+b.getAttribute('data-wait');save();render()});
+  });
+  $('zone').addEventListener('change',function(){
+    state.zone=this.value;state.sel=null;save();render();
+    if(!state.store[state.zone].length) $('dataBox').open=true;
+    autoFetch(true);
+  });
+  $('kwh').addEventListener('input',function(){
+    var n=parseFloat(String(this.value).replace(',','.'));
+    if(Number.isFinite(n)&&n>0&&n<=20){state.kwh=n;save();render()}
+  });
+  var svg=$('chart');
+  svg.addEventListener('pointerdown',selectAt);
+  svg.addEventListener('pointermove',selectAt);
+  svg.addEventListener('pointerleave',function(ev){
+    if(ev.pointerType==='mouse'){state.sel=null;updateSel()}
+  });
+  $('rReset').addEventListener('click',function(){state.sel=null;updateSel()});
+  $('paste').addEventListener('input',function(){
+    var txt=this.value;
+    if(txt.trim().length<2){setMsg('',false);return}
+    var res=parsePaste(txt);
+    if(res.err){setMsg(res.err,true);return}
+    merge(res.entries);
+    state.sel=null;
+    save();
+    this.value='';
+    setMsg('',false);
+    $('dataBox').open=false;
+    render();
+  });
+  $('clearBtn').addEventListener('click',function(){
+    state.store[state.zone]=[];
+    state.sel=null;
+    save();
+    setMsg('Sparad data för '+state.zone+' är rensad.',false);
+    render();
+  });
+  render();
+  var real=state.store[state.zone];
+  var now=Date.now(),covered=real.some(function(x){return now>=x.s&&now<x.e});
+  $('dataBox').open=!covered;
+  if(window.ResizeObserver){
+    var lastW=0;
+    new ResizeObserver(function(){
+      var w=Math.round($('chartWrap').clientWidth);
+      if(w!==lastW){lastW=w;drawChart()}
+    }).observe($('chartWrap'));
+  }else{
+    window.addEventListener('resize',drawChart);
+  }
+  setInterval(render,20000);
+  setInterval(autoFetch,30*60000);
+  autoFetch(true);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden){render();autoFetch()}});
+}
+init();
+})();
+</script>
+
+</body>
+</html>
