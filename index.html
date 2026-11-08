@@ -149,7 +149,7 @@ textarea{width:100%;box-sizing:border-box;min-height:96px;resize:vertical;border
   <p class="notice" id="exBanner" hidden>Exempelpriser tills riktiga priser har hämtats. Fungerar inte hämtningen kan du klistra in dagens priser under Hämta priser längst ner.</p>
 
   <section aria-label="Elpriset just nu">
-    <div class="eyebrow"><span>Just nu</span><span class="tag" id="exTag" hidden>Exempel</span></div>
+    <div class="eyebrow"><span>Just nu</span><span class="tag" id="exTag" hidden>Exempel</span><span id="updAt"></span></div>
     <div class="price">
       <div class="num" id="priceNum">–</div>
       <div class="unit"><b>kr/kWh</b><span id="unitSub">spotpris inkl. moms</span></div>
@@ -223,7 +223,7 @@ textarea{width:100%;box-sizing:border-box;min-height:96px;resize:vertical;border
   <details class="data" id="dataBox">
     <summary><span>Hämta priser</span><span id="dataStatus"></span></summary>
     <div class="data-body">
-      <p>Priserna hämtas automatiskt från elprisetjustnu.se när sidan öppnas och sedan var 30:e minut. Om hämtningen misslyckas kan du lägga in dem för hand:</p>
+      <p>Priserna hämtas automatiskt från elprisetjustnu.se när sidan öppnas och sedan högst var 10:e minut. Om hämtningen misslyckas kan du lägga in dem för hand:</p>
       <ol>
         <li>Öppna filen för idag: <span class="links"><a id="linkToday" href="#" target="_blank" rel="noopener">idag</a></span></li>
         <li>Markera all text och kopiera. Morgondagens fil (<span class="links"><a id="linkTomorrow" href="#" target="_blank" rel="noopener">imorgon</a></span>) finns först cirka 13:00, och går att klistra in efter idag.</li>
@@ -287,7 +287,7 @@ function niceStep(range){
 'use strict';
 var TZ='Europe/Stockholm',KEY='elpriskollen.v1';
 var ZONES=['SE1','SE2','SE3','SE4'],DURS=[60,120,180,240],WAITS=[180,360,720,1440];
-var state={zone:'SE3',moms:true,dur:120,wait:720,kwh:1,store:{SE1:[],SE2:[],SE3:[],SE4:[]},sel:null,win:null};
+var state={zone:'SE3',moms:true,dur:120,wait:720,kwh:1,store:{SE1:[],SE2:[],SE3:[],SE4:[]},sel:null,win:null,fetched:{SE1:0,SE2:0,SE3:0,SE4:0}};
 var view=null;
 function $(id){return document.getElementById(id)}
 
@@ -333,6 +333,7 @@ function load(){
     if(DURS.indexOf(o.dur)>=0) state.dur=o.dur;
     if(WAITS.indexOf(o.wait)>=0) state.wait=o.wait;
     if(Number.isFinite(o.kwh)&&o.kwh>0&&o.kwh<=20) state.kwh=o.kwh;
+    if(o.fetched&&typeof o.fetched==='object'){ZONES.forEach(function(z){if(Number.isFinite(o.fetched[z])) state.fetched[z]=o.fetched[z]})}
     if(o.store&&typeof o.store==='object'){
       ZONES.forEach(function(z){
         if(Array.isArray(o.store[z])) state.store[z]=o.store[z].filter(validEntry).sort(function(a,b){return a.s-b.s});
@@ -342,7 +343,7 @@ function load(){
 }
 function save(){
   try{
-    localStorage.setItem(KEY,JSON.stringify({zone:state.zone,moms:state.moms,dur:state.dur,wait:state.wait,kwh:state.kwh,store:state.store}));
+    localStorage.setItem(KEY,JSON.stringify({zone:state.zone,moms:state.moms,dur:state.dur,wait:state.wait,kwh:state.kwh,store:state.store,fetched:state.fetched}));
   }catch(e){}
 }
 
@@ -379,16 +380,16 @@ function fetchDay(ms){
     return res.entries;
   });
 }
-var fetching=false,lastTry=0;
+var FETCH_TTL=10*60000,fetching=false,lastTry=0;
 function hasNow(){
   var now=Date.now();
   return state.store[state.zone].some(function(x){return now>=x.s&&now<x.e});
 }
-function autoFetch(force){
-  var now=Date.now();
-  if(fetching||(!force&&now-lastTry<5*60000)) return;
+function autoFetch(){
+  var now=Date.now(),zone=state.zone;
+  var fresh=now-(state.fetched[zone]||0)<FETCH_TTL&&hasNow();
+  if(fetching||fresh||now-lastTry<60000) return;
   fetching=true;lastTry=now;
-  var zone=state.zone;
   var tomorrow=fetchDay(now+86400000).catch(function(){return null});
   fetchDay(now).then(function(today){
     return tomorrow.then(function(tmr){
@@ -396,6 +397,7 @@ function autoFetch(force){
       if(today) merge(today);
       if(tmr) merge(tmr);
       if(today||tmr){
+        state.fetched[zone]=Date.now();
         save();setMsg('',false);render();
         $('dataBox').open=!hasNow();
       }else{
@@ -454,7 +456,9 @@ function render(){
 
   var last=E[E.length-1];
   var endLbl=tm(last.e)==='00:00'?'24:00':tm(last.e);
-  $('dataStatus').textContent=ex?'Exempeldata':('Data t.o.m. '+dayLabel(last.e-1,now).toLowerCase()+' '+endLbl);
+  var upd=state.fetched[state.zone];
+  $('dataStatus').textContent=ex?'Exempeldata':((upd?'Uppdaterad '+tm(upd)+' · data':'Data')+' t.o.m. '+dayLabel(last.e-1,now).toLowerCase()+' '+endLbl);
+  $('updAt').textContent=(!ex&&upd)?'· uppdaterad '+tm(upd):'';
 
   var pill=$('pill');
   if(cur){
@@ -658,7 +662,7 @@ function init(){
   $('zone').addEventListener('change',function(){
     state.zone=this.value;state.sel=null;save();render();
     if(!state.store[state.zone].length) $('dataBox').open=true;
-    autoFetch(true);
+    autoFetch();
   });
   $('kwh').addEventListener('input',function(){
     var n=parseFloat(String(this.value).replace(',','.'));
@@ -676,7 +680,7 @@ function init(){
     if(txt.trim().length<2){setMsg('',false);return}
     var res=parsePaste(txt);
     if(res.err){setMsg(res.err,true);return}
-    merge(res.entries);
+    merge(res.entries);state.fetched[state.zone]=Date.now();
     state.sel=null;
     save();
     this.value='';
@@ -686,6 +690,7 @@ function init(){
   });
   $('clearBtn').addEventListener('click',function(){
     state.store[state.zone]=[];
+    state.fetched[state.zone]=0;
     state.sel=null;
     save();
     setMsg('Sparad data för '+state.zone+' är rensad.',false);
@@ -705,8 +710,8 @@ function init(){
     window.addEventListener('resize',drawChart);
   }
   setInterval(render,20000);
-  setInterval(autoFetch,30*60000);
-  autoFetch(true);
+  setInterval(autoFetch,60000);
+  autoFetch();
   document.addEventListener('visibilitychange',function(){if(!document.hidden){render();autoFetch()}});
 }
 init();
